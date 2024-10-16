@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ar">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>تحميل ملف Excel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+  </head>
+  <body>
+    <h1>رفع ملف Excel</h1>
+    <input
+      type="text"
+      id="custom-value"
+      placeholder="أدخل القيمة للعمود الخامس"
+    />
+    <input type="file" id="file-input" />
+    <button id="process-btn">معالجة الملف</button>
+    <a id="download-link" style="display: none">تحميل الملف النهائي</a>
+
+    <script>
+      document
+        .getElementById("process-btn")
+        .addEventListener("click", function () {
+          const customValue = document.getElementById("custom-value").value; // القيمة المدخلة
+          const fileInput = document.getElementById("file-input");
+          const file = fileInput.files[0];
+
+          if (!file) {
+            alert("الرجاء اختيار ملف.");
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+
+            // تحويل البيانات إلى مصفوفة
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+            const filteredData = jsonData.filter(
+              (row) =>
+                row.some((cell) => cell !== null && cell !== "") &&
+                !row.some(
+                  (cell) =>
+                    typeof cell === "string" && cell.includes("OLT Slot")
+                )
+            );
+
+            const selectedColumns = filteredData
+              .map((row) => [row[2], row[3], row[4], `FAT${row[10]}`])
+              .concat(
+                filteredData.map((row) => [
+                  row[14],
+                  row[15],
+                  row[16],
+                  `FAT${row[22]}`,
+                ])
+              )
+              .filter(
+                (row) =>
+                  !row.some(
+                    (cell) =>
+                      typeof cell === "string" &&
+                      (cell.includes("FATempty") ||
+                        cell.includes("FATundefined"))
+                  )
+              ); // حذف الصفوف التي تحتوي على FATempty أو FATundefined
+
+            // ملء الفراغات بالقيمة الموجودة في الصفوف السابقة للأعمدة الأولى والثانية والثالثة
+            for (let col = 0; col < 3; col++) {
+              // الأعمدة من 0 إلى 2
+              let lastValue = null;
+              for (let row = 0; row < selectedColumns.length; row++) {
+                if (
+                  selectedColumns[row][col] !== undefined &&
+                  selectedColumns[row][col] !== ""
+                ) {
+                  lastValue = selectedColumns[row][col]; // تحديث القيمة الأخيرة
+                } else {
+                  selectedColumns[row][col] = lastValue; // ملء الفراغ بالقيمة الأخيرة
+                }
+              }
+            }
+
+            // ملء العمود الخامس بالقيمة المدخلة
+            selectedColumns.forEach((row, index) => {
+              if (index < selectedColumns.length) {
+                row[4] = customValue; // ملء العمود الخامس بالقيمة المدخلة
+              }
+            });
+
+            // إنشاء ورقة عمل جديدة من الأعمدة المحددة
+            const newWorksheet = XLSX.utils.aoa_to_sheet(selectedColumns);
+            const newWorkbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(
+              newWorkbook,
+              newWorksheet,
+              "أعمدة مختارة"
+            );
+
+            // تحويل الملف النهائي إلى Blob
+            const finalFile = XLSX.write(newWorkbook, {
+              bookType: "xlsx",
+              type: "binary",
+            });
+            const blob = new Blob([s2ab(finalFile)], {
+              type: "application/octet-stream",
+            });
+
+            // إعداد رابط التحميل
+            const downloadLink = document.getElementById("download-link");
+            downloadLink.href = URL.createObjectURL(blob);
+            downloadLink.download = "final_file.xlsx";
+            downloadLink.style.display = "block";
+            downloadLink.innerText = "تحميل الملف النهائي";
+          };
+
+          reader.readAsArrayBuffer(file);
+        });
+
+      // دالة لتحويل النص إلى مصفوفة ثنائية
+      function s2ab(s) {
+        const buf = new ArrayBuffer(s.length);
+        const view = new Uint8Array(buf);
+        for (let i = 0; i < s.length; i++) {
+          view[i] = s.charCodeAt(i) & 0xff;
+        }
+        return buf;
+      }
+    </script>
+  </body>
+</html>
