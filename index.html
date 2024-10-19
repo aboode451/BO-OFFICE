@@ -88,7 +88,7 @@
   <select id="oltType">
     <option value="">  OLT TYPE</option>
     <option value="HWOLT ">hawawi-POE</option>
-    <option value="nokia">nokia </option>
+    <option value="NKOLT">NKOLT </option>
     <option value="HWOLT">hawawi</option>
   </select>
   <input type="text" id="mainvlan" placeholder="   mainvlan " />
@@ -282,8 +282,8 @@
           row1[3],
           oltip,
           oltType, // إضافة الخيار المحدد هنا
-          oltType === "HWOLT " ? "ftthpostman@ftth.iq" : oltType === "nokia" ? "ftthpostman" : "ftthpostman",
-          oltType === "HWOLT " ? "rKYAYki0k8POhwf" : oltType === "nokia" ? "rKYAYki0k8POhwf" : "rKYAYki0k8POhwf",
+          oltType === "HWOLT " ? "ftthpostman@ftth.iq" : oltType === "NKOLT" ? "ftthpostman" : "ftthpostman",
+          oltType === "HWOLT " ? "rKYAYki0k8POhwf" : oltType === "NKOLT" ? "rKYAYki0k8POhwf" : "rKYAYki0k8POhwf",
           row1[0],
           row1[1],
           mainvlan,
