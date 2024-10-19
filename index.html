@@ -1,135 +1,367 @@
-<!DOCTYPE html>
-<html lang="ar">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>تحميل ملف Excel</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
-  </head>
-  <body>
-    <h1>رفع ملف Excel</h1>
-    <input
-      type="text"
-      id="custom-value"
-      placeholder="أدخل القيمة للعمود الخامس"
-    />
-    <input type="file" id="file-input" />
-    <button id="process-btn">معالجة الملف</button>
-    <a id="download-link" style="display: none">تحميل الملف النهائي</a>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Excel Merge and Clean</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #e0f7fa;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+  }
 
-    <script>
-      document
-        .getElementById("process-btn")
-        .addEventListener("click", function () {
-          const customValue = document.getElementById("custom-value").value; // القيمة المدخلة
-          const fileInput = document.getElementById("file-input");
-          const file = fileInput.files[0];
+  h1 {
+    text-align: center;
+    color: #007bff;
+  }
 
-          if (!file) {
-            alert("الرجاء اختيار ملف.");
-            return;
-          }
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 1s ease;
+  }
 
-          const reader = new FileReader();
-          reader.onload = function (e) {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: "array" });
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 
-            // تحويل البيانات إلى مصفوفة
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+  input,
+  select {
+    display: block;
+    width: calc(100% - 40px);
+    margin: 10px 20px;
+    padding: 12px;
+    font-size: 16px;
+    border: 1px solid #007bff;
+    border-radius: 5px;
+    transition: border-color 0.3s;
+  }
 
-            const filteredData = jsonData.filter(
-              (row) =>
-                row.some((cell) => cell !== null && cell !== "") &&
-                !row.some(
-                  (cell) =>
-                    typeof cell === "string" && cell.includes("OLT Slot")
-                )
-            );
+  input:disabled, select:disabled {
+    background-color: #f0f0f0;
+    cursor: not-allowed;
+  }
 
-            const selectedColumns = filteredData
-              .map((row) => [row[2], row[3], row[4], `FAT${row[10]}`])
-              .concat(
-                filteredData.map((row) => [
-                  row[14],
-                  row[15],
-                  row[16],
-                  `FAT${row[22]}`,
-                ])
-              )
-              .filter(
-                (row) =>
-                  !row.some(
-                    (cell) =>
-                      typeof cell === "string" &&
-                      (cell.includes("FATempty") ||
-                        cell.includes("FATundefined"))
-                  )
-              ); // حذف الصفوف التي تحتوي على FATempty أو FATundefined
+  #download,
+  #reset {
+    display: block;
+    width: calc(100% - 40px);
+    margin: 20px;
+    padding: 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
 
-            // ملء الفراغات بالقيمة الموجودة في الصفوف السابقة للأعمدة الأولى والثانية والثالثة
-            for (let col = 0; col < 3; col++) {
-              // الأعمدة من 0 إلى 2
-              let lastValue = null;
-              for (let row = 0; row < selectedColumns.length; row++) {
-                if (
-                  selectedColumns[row][col] !== undefined &&
-                  selectedColumns[row][col] !== ""
-                ) {
-                  lastValue = selectedColumns[row][col]; // تحديث القيمة الأخيرة
-                } else {
-                  selectedColumns[row][col] = lastValue; // ملء الفراغ بالقيمة الأخيرة
-                }
-              }
+  #download:hover, #reset:hover {
+    background-color: #0056b3;
+  }
+
+  .message {
+    text-align: center;
+    color: red;
+    margin: 5px 0;
+  }
+  .message {
+    text-align: center;
+    color: red;
+    margin: 5px 0;
+  }
+
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>ADD ZONE </h1>
+  <input type="text" id="manualValue" placeholder=" ZONE " />
+  <input type="text" id="FDT" placeholder="   FDT " />
+  <input type="text" id="oltip" placeholder="   OltIP " />
+  <select id="oltType">
+    <option value="">  OLT TYPE</option>
+    <option value="HWOLT ">hawawi-POE</option>
+    <option value="nokia">nokia </option>
+    <option value="HWOLT">hawawi</option>
+  </select>
+  <input type="text" id="mainvlan" placeholder="   mainvlan " />
+
+
+  <input type="file" id="upload" accept=".xlsx, .xls" disabled />
+  <div id="warning-message" class="message">يرجى إدخال جميع البيانات لتفعيل رفع الملف.</div>
+
+  <button id="download">تحميل الملف المنظف</button>
+  <button id="reset">إعادة تعيين</button>
+
+</div>
+
+<script>
+   // مرجع لحقل رفع الملف وزر التحميل
+   const uploadInput = document.getElementById("upload");
+  const downloadButton = document.getElementById("download");
+  const warningMessage = document.getElementById("warning-message");
+
+  // في البداية يتم تعطيل زر تحميل الملف وحقل رفع الملف
+  uploadInput.disabled = true;
+  downloadButton.disabled = true;
+  warningMessage.style.display = "block"; // إظهار الرسالة
+  // التحقق من أن الحقول مطلوبة قبل تمكين رفع الملف
+  function validateInputs() {
+    const manualValue = document.getElementById("manualValue").value.trim();
+    const FDT = document.getElementById("FDT").value.trim();
+    const oltip = document.getElementById("oltip").value.trim();
+    const oltType = document.getElementById("oltType").value.trim();
+    const mainvlan = document.getElementById("mainvlan").value.trim();
+
+    // إذا كانت جميع الحقول مملوءة، قم بتمكين رفع الملف وزر التحميل
+    if (manualValue && FDT && oltip && oltType && mainvlan) {
+      uploadInput.disabled = false;
+      downloadButton.disabled = false;
+      warningMessage.style.display = "none"; // إخفاء الرسالة
+
+    } else {
+      uploadInput.disabled = true;
+      downloadButton.disabled = true;
+      warningMessage.style.display = "block"; // إظهار الرسالة
+
+    }
+  }
+
+  // إضافة مراقبين على الحقول للتحقق من صحتها بعد كل تغيير
+  document.getElementById("manualValue").addEventListener("input", validateInputs);
+  document.getElementById("FDT").addEventListener("input", validateInputs);
+  document.getElementById("oltip").addEventListener("input", validateInputs);
+  document.getElementById("oltType").addEventListener("change", validateInputs);
+  document.getElementById("mainvlan").addEventListener("input", validateInputs);
+
+  let mergedData = [];
+
+  document.getElementById("upload").addEventListener("change", handleFile);
+  document.getElementById("reset").addEventListener("click", resetFields);
+  document.getElementById("download").addEventListener("click", downloadFile);
+
+
+  function handleFile(event) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function (event) {
+      const data = new Uint8Array(event.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonSheet = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      // Extract the columns and clean data
+      mergedData = mergeAndCleanColumns(jsonSheet, [
+        "OLT Slot",
+        "Gpon",
+        "VLAN",
+        "FAT NO.",
+      ]);
+    };
+
+    reader.readAsArrayBuffer(file);
+  }
+  function resetFields() {
+    // إعادة تعيين حقول المدخلات إلى حالتها الأولية
+    document.getElementById("manualValue").value = "";
+    document.getElementById("FDT").value = "";
+    document.getElementById("oltip").value = "";
+    document.getElementById("oltType").selectedIndex = 0;
+    document.getElementById("mainvlan").value = "";
+
+    document.getElementById("upload").value = ""; // لإعادة تعيين اختيار الملف
+    mergedData = []; // إعادة تعيين بيانات الدمج
+
+    // تعطيل رفع الملف وزر التحميل مجددًا
+    uploadInput.disabled = true;
+    downloadButton.disabled = true;
+    warningMessage.style.display = "block"; // إظهار الرسالة
+
+  }
+  function downloadFile() {
+  if (mergedData.length === 0) {
+    alert("يرجى تحميل ملف أولاً.");
+    return;
+  }
+
+  const manualValue = document.getElementById("manualValue").value.trim() || "NoValue"; // Get the manual value for file name
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(mergedData);
+  XLSX.utils.book_append_sheet(wb, ws, "البيانات المنظفة");
+
+  // Use manualValue in the file name
+  const fileName = `ZONE_${manualValue}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+  resetFields();
+}
+  function mergeAndCleanColumns(sheet, keywords) {
+    let headerRowIndex = -1;
+    let columnIndexes1 = [];
+    let columnIndexes2 = [];
+
+    // البحث عن صف العناوين وتحديد الأعمدة
+    for (let i = 0; i < sheet.length; i++) {
+      for (let j = 0; j < sheet[i].length; j++) {
+        const cellValue = String(sheet[i][j] || "").toLowerCase();
+        for (const keyword of keywords) {
+          if (cellValue.includes(keyword.toLowerCase())) {
+            headerRowIndex = i;
+            if (columnIndexes1.length < 4) {
+              columnIndexes1.push(j); // أول مجموعة من الأعمدة
+            } else {
+              columnIndexes2.push(j); // ثاني مجموعة من الأعمدة
             }
-
-            // ملء العمود الخامس بالقيمة المدخلة
-            selectedColumns.forEach((row, index) => {
-              if (index < selectedColumns.length) {
-                row[4] = customValue; // ملء العمود الخامس بالقيمة المدخلة
-              }
-            });
-
-            // إنشاء ورقة عمل جديدة من الأعمدة المحددة
-            const newWorksheet = XLSX.utils.aoa_to_sheet(selectedColumns);
-            const newWorkbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(
-              newWorkbook,
-              newWorksheet,
-              "أعمدة مختارة"
-            );
-
-            // تحويل الملف النهائي إلى Blob
-            const finalFile = XLSX.write(newWorkbook, {
-              bookType: "xlsx",
-              type: "binary",
-            });
-            const blob = new Blob([s2ab(finalFile)], {
-              type: "application/octet-stream",
-            });
-
-            // إعداد رابط التحميل
-            const downloadLink = document.getElementById("download-link");
-            downloadLink.href = URL.createObjectURL(blob);
-            downloadLink.download = "final_file.xlsx";
-            downloadLink.style.display = "block";
-            downloadLink.innerText = "تحميل الملف النهائي";
-          };
-
-          reader.readAsArrayBuffer(file);
-        });
-
-      // دالة لتحويل النص إلى مصفوفة ثنائية
-      function s2ab(s) {
-        const buf = new ArrayBuffer(s.length);
-        const view = new Uint8Array(buf);
-        for (let i = 0; i < s.length; i++) {
-          view[i] = s.charCodeAt(i) & 0xff;
+            break;
+          }
         }
-        return buf;
       }
-    </script>
-  </body>
+      if (headerRowIndex !== -1) break; // التوقف بعد العثور على صف العناوين
+    }
+
+    if (headerRowIndex === -1 || columnIndexes1.length === 0) {
+      alert(
+        "لم يتم العثور على الأعمدة المطلوبة: OLT Slot, Gpon, VLAN, FAT NO."
+      );
+      return [];
+    }
+
+    const mergedData = [];
+
+    // **تغيير ترتيب العناوين هنا**
+    mergedData.push([
+      "Zone",
+      "FDT",
+      "FAT",
+      "OltIP",
+      "OltType",
+      "OltUser",
+      "OltPass",
+      "OltGpon",
+      "OltGponPort",
+      "MainVlan",
+      "InnerVlan",
+      "AlwaysSuccess",
+    ]);
+
+    // الحصول على القيمة المدخلة يدويًا
+    const manualValue =
+      document.getElementById("manualValue").value.trim() || "لا توجد قيمة";
+    const FDT =
+      document.getElementById("FDT").value.trim() || "لا توجد قيمة";
+    const oltip =
+      document.getElementById("oltip").value.trim() || "لا توجد قيمة";
+      const oltType = document.getElementById("oltType").value;
+
+      const mainvlan =
+
+      document.getElementById("mainvlan").value.trim() || "لا توجد قيمة";
+
+
+    // استخراج البيانات من أول 4 أعمدة
+    for (let i = headerRowIndex + 1; i < sheet.length; i++) {
+      const row1 = columnIndexes1.map((index) => sheet[i][index]);
+
+      // إضافة الصفوف غير الفارغة والتي لا تحتوي على العناوين
+      if (
+        row1.some((cell) => cell !== undefined) &&
+        !isHeaderRow(row1, keywords)
+      ) {
+        // **تغيير ترتيب الأعمدة هنا أيضًا**
+        mergedData.push([
+          manualValue,
+          FDT,
+          row1[3],
+          oltip,
+          oltType, // إضافة الخيار المحدد هنا
+          oltType === "HWOLT " ? "ftthpostman@ftth.iq" : oltType === "nokia" ? "ftthpostman" : "ftthpostman",
+          oltType === "HWOLT " ? "rKYAYki0k8POhwf" : oltType === "nokia" ? "rKYAYki0k8POhwf" : "rKYAYki0k8POhwf",
+          row1[0],
+          row1[1],
+          mainvlan,
+          row1[2],
+          0,
+        ]);
+      }
+    }
+
+    // استخراج البيانات من الأعمدة الثانية وإضافتها أسفل الأعمدة الأولى
+    for (let i = headerRowIndex + 1; i < sheet.length; i++) {
+      const row2 = columnIndexes2.map((index) => sheet[i][index]);
+
+      // إضافة الصفوف غير الفارغة والتي لا تحتوي على العناوين
+      if (
+        row2.some((cell) => cell !== undefined) &&
+        !isHeaderRow(row2, keywords)
+      ) {
+        // **تغيير ترتيب الأعمدة هنا أيضًا**
+        mergedData.push([
+          manualValue,
+          FDT,
+          row2[3],
+          oltip,
+          oltType, // إضافة الخيار المحدد هنا
+          oltType === "HWOLT " ? "ftthpostman@ftth.iq" : oltType === "nokia" ? "ftthpostman" : "ftthpostman",
+          oltType === "HWOLT " ? "rKYAYki0k8POhwf" : oltType === "nokia" ? "rKYAYki0k8POhwf" : "rKYAYki0k8POhwf",
+          row2[0],
+          row2[1],
+          mainvlan,
+          row2[2],
+          0,
+        ]);
+      }
+    }
+
+    // ملء الخلايا الفارغة في الأعمدة الثلاثة الأولى
+    const fatNoIndex = mergedData[0].indexOf("FAT");
+
+    for (let i = 1; i < mergedData.length; i++) {
+      for (let j = 0; j < mergedData[i].length; j++) {
+        if (j !== fatNoIndex) {
+          if (mergedData[i][j] === undefined || mergedData[i][j] === "") {
+            mergedData[i][j] = mergedData[i - 1][j]; // خذ القيمة من الصف السابق
+          }
+        }
+      }
+    }
+
+    // الآن نضيف "FAT" قبل كل رقم في عمود FAT NO.
+    for (let i = 1; i < mergedData.length; i++) {
+      if (
+        mergedData[i][fatNoIndex] !== undefined &&
+        !isNaN(mergedData[i][fatNoIndex])
+      ) {
+        mergedData[i][fatNoIndex] = "FAT " + mergedData[i][fatNoIndex];
+      }
+    }
+
+    // حذف أي صف يحتوي على الكلمة "empty" بعد معالجة النتائج
+    const cleanedData = mergedData.filter((row) =>
+      row.every((cell) => String(cell).toLowerCase() !== "empty")
+    );
+
+    return cleanedData;
+  }
+
+  // وظيفة مساعدة للتحقق مما إذا كان الصف يحتوي على العناوين
+  function isHeaderRow(row, keywords) {
+    return keywords.every((keyword, index) =>
+      String(row[index] || "")
+        .toLowerCase()
+        .includes(keyword.toLowerCase())
+    );
+  }
+
+  
+    
+</script>
+</body>
 </html>
