@@ -199,7 +199,7 @@
   XLSX.utils.book_append_sheet(wb, ws, "البيانات المنظفة");
 
   // Use manualValue in the file name
-  const fileName = `ZONE_${manualValue}.xlsx`;
+  const fileName = `ZONE_${manualValue}.csv`;
   XLSX.writeFile(wb, fileName);
   resetFields();
 }
@@ -287,8 +287,8 @@ function mergeAndCleanColumns(sheet, keywords) {
                 oltType === "HWOLT " ? "rKYAYki0k8POhwf" : oltType === "NKOLT" ? "rKYAYki0k8POhwf" : "rKYAYki0k8POhwf",
                 oltSlotValue,
                 row1[1],
-                row1[2],
                 mainvlan,
+                row1[2],
                 0,
             ]);
         }
@@ -317,8 +317,8 @@ function mergeAndCleanColumns(sheet, keywords) {
                 oltType === "HWOLT " ? "rKYAYki0k8POhwf" : oltType === "NKOLT" ? "rKYAYki0k8POhwf" : "rKYAYki0k8POhwf",
                 oltSlotValue,
                 row2[1],
-                row2[2],
                 mainvlan,
+                row2[2],
                 0,
             ]);
         }
