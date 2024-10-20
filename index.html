@@ -203,153 +203,158 @@
   XLSX.writeFile(wb, fileName);
   resetFields();
 }
-  function mergeAndCleanColumns(sheet, keywords) {
+function mergeAndCleanColumns(sheet, keywords) {
     let headerRowIndex = -1;
     let columnIndexes1 = [];
     let columnIndexes2 = [];
 
     // البحث عن صف العناوين وتحديد الأعمدة
     for (let i = 0; i < sheet.length; i++) {
-      for (let j = 0; j < sheet[i].length; j++) {
-        const cellValue = String(sheet[i][j] || "").toLowerCase();
-        for (const keyword of keywords) {
-          if (cellValue.includes(keyword.toLowerCase())) {
-            headerRowIndex = i;
-            if (columnIndexes1.length < 4) {
-              columnIndexes1.push(j); // أول مجموعة من الأعمدة
-            } else {
-              columnIndexes2.push(j); // ثاني مجموعة من الأعمدة
+        for (let j = 0; j < sheet[i].length; j++) {
+            const cellValue = String(sheet[i][j] || "").toLowerCase();
+            for (const keyword of keywords) {
+                if (cellValue.includes(keyword.toLowerCase())) {
+                    headerRowIndex = i;
+                    if (columnIndexes1.length < 4) {
+                        columnIndexes1.push(j); // أول مجموعة من الأعمدة
+                    } else {
+                        columnIndexes2.push(j); // ثاني مجموعة من الأعمدة
+                    }
+                    break;
+                }
             }
-            break;
-          }
         }
-      }
-      if (headerRowIndex !== -1) break; // التوقف بعد العثور على صف العناوين
+        if (headerRowIndex !== -1) break; // التوقف بعد العثور على صف العناوين
     }
 
     if (headerRowIndex === -1 || columnIndexes1.length === 0) {
-      alert(
-        "لم يتم العثور على الأعمدة المطلوبة: OLT Slot, Gpon, VLAN, FAT NO."
-      );
-      return [];
+        alert(
+            "لم يتم العثور على الأعمدة المطلوبة: OLT Slot, Gpon, VLAN, FAT NO."
+        );
+        return [];
     }
 
     const mergedData = [];
 
     // **تغيير ترتيب العناوين هنا**
     mergedData.push([
-      "Zone",
-      "FDT",
-      "FAT",
-      "OltIP",
-      "OltType",
-      "OltUser",
-      "OltPass",
-      "OltGpon",
-      "OltGponPort",
-      "MainVlan",
-      "InnerVlan",
-      "AlwaysSuccess",
+        "Zone",
+        "FDT",
+        "FAT",
+        "OltIP",
+        "OltType",
+        "OltUser",
+        "OltPass",
+        "OltGpon",
+        "OltGponPort",
+        "MainVlan",
+        "InnerVlan",
+        "AlwaysSuccess",
     ]);
 
     // الحصول على القيمة المدخلة يدويًا
     const manualValue =
-      document.getElementById("manualValue").value.trim() || "لا توجد قيمة";
+        document.getElementById("manualValue").value.trim() || "لا توجد قيمة";
     const FDT =
-      document.getElementById("FDT").value.trim() || "لا توجد قيمة";
+        document.getElementById("FDT").value.trim() || "لا توجد قيمة";
     const oltip =
-      document.getElementById("oltip").value.trim() || "لا توجد قيمة";
-      const oltType = document.getElementById("oltType").value;
-
-      const mainvlan =
-
-      document.getElementById("mainvlan").value.trim() || "لا توجد قيمة";
-
+        document.getElementById("oltip").value.trim() || "لا توجد قيمة";
+    const oltType = document.getElementById("oltType").value;
+    const mainvlan =
+        document.getElementById("mainvlan").value.trim() || "لا توجد قيمة";
 
     // استخراج البيانات من أول 4 أعمدة
     for (let i = headerRowIndex + 1; i < sheet.length; i++) {
-      const row1 = columnIndexes1.map((index) => sheet[i][index]);
+        const row1 = columnIndexes1.map((index) => sheet[i][index]);
 
-      // إضافة الصفوف غير الفارغة والتي لا تحتوي على العناوين
-      if (
-        row1.some((cell) => cell !== undefined) &&
-        !isHeaderRow(row1, keywords)
-      ) {
-        // **تغيير ترتيب الأعمدة هنا أيضًا**
-        mergedData.push([
-          manualValue,
-          FDT,
-          row1[3],
-          oltip,
-          oltType, // إضافة الخيار المحدد هنا
-          oltType === "HWOLT " ? "ftthpostman@ftth.iq" : oltType === "NKOLT" ? "ftthpostman" : "ftthpostman",
-          oltType === "HWOLT " ? "rKYAYki0k8POhwf" : oltType === "NKOLT" ? "rKYAYki0k8POhwf" : "rKYAYki0k8POhwf",
-          row1[0],
-          row1[1],
-          mainvlan,
-          row1[2],
-          0,
-        ]);
-      }
+        // إضافة الصفوف غير الفارغة والتي لا تحتوي على العناوين
+        if (
+            row1.some((cell) => cell !== undefined) &&
+            !isHeaderRow(row1, keywords)
+        ) {
+            // **تغيير ترتيب الأعمدة هنا أيضًا**
+            const oltSlotValue = (oltType === "NKOLT") 
+            ? row1[0] 
+            : (row1[0] !== undefined && !isNaN(row1[0])) ? `gpon 0/${row1[0]}` : row1[0]; // إضافة "gpon 0/" إذا كان الرقم
+
+            mergedData.push([
+                manualValue,
+                FDT,
+                row1[3],
+                oltip,
+                oltType, // إضافة الخيار المحدد هنا
+                oltType === "HWOLT " ? "ftthpostman@ftth.iq" : oltType === "NKOLT" ? "ftthpostman" : "ftthpostman",
+                oltType === "HWOLT " ? "rKYAYki0k8POhwf" : oltType === "NKOLT" ? "rKYAYki0k8POhwf" : "rKYAYki0k8POhwf",
+                oltSlotValue,
+                row1[1],
+                row1[2],
+                mainvlan,
+                0,
+            ]);
+        }
     }
 
     // استخراج البيانات من الأعمدة الثانية وإضافتها أسفل الأعمدة الأولى
     for (let i = headerRowIndex + 1; i < sheet.length; i++) {
-      const row2 = columnIndexes2.map((index) => sheet[i][index]);
+        const row2 = columnIndexes2.map((index) => sheet[i][index]);
 
-      // إضافة الصفوف غير الفارغة والتي لا تحتوي على العناوين
-      if (
-        row2.some((cell) => cell !== undefined) &&
-        !isHeaderRow(row2, keywords)
-      ) {
-        // **تغيير ترتيب الأعمدة هنا أيضًا**
-        mergedData.push([
-          manualValue,
-          FDT,
-          row2[3],
-          oltip,
-          oltType, // إضافة الخيار المحدد هنا
-          oltType === "HWOLT " ? "ftthpostman@ftth.iq" : oltType === "nokia" ? "ftthpostman" : "ftthpostman",
-          oltType === "HWOLT " ? "rKYAYki0k8POhwf" : oltType === "nokia" ? "rKYAYki0k8POhwf" : "rKYAYki0k8POhwf",
-          row2[0],
-          row2[1],
-          mainvlan,
-          row2[2],
-          0,
-        ]);
-      }
+        // إضافة الصفوف غير الفارغة والتي لا تحتوي على العناوين
+        if (
+            row2.some((cell) => cell !== undefined) &&
+            !isHeaderRow(row2, keywords)
+        ) {
+          const oltSlotValue = (oltType === "NKOLT") 
+            ? row2[0] 
+            : (row2[0] !== undefined && !isNaN(row2[0])) ? `gpon 0/${row2[0]}` : row2[0]; // إضافة "gpon 0/" إذا كان الرقم
+
+            mergedData.push([
+            manualValue, // استخدام القيمة المعدلة هنا
+                FDT,
+                row2[3],
+                oltip,
+                oltType, // إضافة الخيار المحدد هنا
+                oltType === "HWOLT " ? "ftthpostman@ftth.iq" : oltType === "NKOLT" ? "ftthpostman" : "ftthpostman",
+                oltType === "HWOLT " ? "rKYAYki0k8POhwf" : oltType === "NKOLT" ? "rKYAYki0k8POhwf" : "rKYAYki0k8POhwf",
+                oltSlotValue,
+                row2[1],
+                row2[2],
+                mainvlan,
+                0,
+            ]);
+        }
     }
 
     // ملء الخلايا الفارغة في الأعمدة الثلاثة الأولى
     const fatNoIndex = mergedData[0].indexOf("FAT");
 
     for (let i = 1; i < mergedData.length; i++) {
-      for (let j = 0; j < mergedData[i].length; j++) {
-        if (j !== fatNoIndex) {
-          if (mergedData[i][j] === undefined || mergedData[i][j] === "") {
-            mergedData[i][j] = mergedData[i - 1][j]; // خذ القيمة من الصف السابق
-          }
+        for (let j = 0; j < mergedData[i].length; j++) {
+            if (j !== fatNoIndex) {
+                if (mergedData[i][j] === undefined || mergedData[i][j] === "") {
+                    mergedData[i][j] = mergedData[i - 1][j]; // خذ القيمة من الصف السابق
+                }
+            }
         }
-      }
     }
 
     // الآن نضيف "FAT" قبل كل رقم في عمود FAT NO.
     for (let i = 1; i < mergedData.length; i++) {
-      if (
-        mergedData[i][fatNoIndex] !== undefined &&
-        !isNaN(mergedData[i][fatNoIndex])
-      ) {
-        mergedData[i][fatNoIndex] = "FAT" + mergedData[i][fatNoIndex];
-      }
+        if (
+            mergedData[i][fatNoIndex] !== undefined &&
+            !isNaN(mergedData[i][fatNoIndex])
+        ) {
+            mergedData[i][fatNoIndex] = "FAT" + mergedData[i][fatNoIndex];
+        }
     }
 
     // حذف أي صف يحتوي على الكلمة "empty" بعد معالجة النتائج
     const cleanedData = mergedData.filter((row) =>
-      row.every((cell) => String(cell).toLowerCase() !== "empty")
+        row.every((cell) => String(cell).toLowerCase() !== "empty")
     );
 
     return cleanedData;
-  }
+}
+
 
   // وظيفة مساعدة للتحقق مما إذا كان الصف يحتوي على العناوين
   function isHeaderRow(row, keywords) {
