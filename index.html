@@ -339,13 +339,18 @@ function mergeAndCleanColumns(sheet, keywords) {
 
     // الآن نضيف "FAT" قبل كل رقم في عمود FAT NO.
     for (let i = 1; i < mergedData.length; i++) {
-        if (
-            mergedData[i][fatNoIndex] !== undefined &&
-            !isNaN(mergedData[i][fatNoIndex])
-        ) {
-            mergedData[i][fatNoIndex] = "FAT" + mergedData[i][fatNoIndex];
-        }
+    if (
+        mergedData[i][fatNoIndex] !== undefined &&
+        (
+            // تحقق إذا كانت القيمة رقمية فقط
+            !isNaN(mergedData[i][fatNoIndex]) ||
+            // تحقق إذا كان الرقم يحتوي على حرف "E" بعده
+            /^[0-9]+E$/i.test(mergedData[i][fatNoIndex])
+        )
+    ) {
+        mergedData[i][fatNoIndex] = "FAT" + mergedData[i][fatNoIndex];
     }
+}
 
     // حذف أي صف يحتوي على الكلمة "empty" بعد معالجة النتائج
     const cleanedData = mergedData.filter((row) =>
