@@ -320,10 +320,10 @@
                 for (let i = 0; i < row.length; i++) {
                     // التحقق من وجود الخلية وتطبيع القيم
                     const cell = row[i] != null ? row[i].toString().trim() : "";
-                    if (cell === "֎" && i > 0) {
+                  //  if (cell === "֎" && i > 0) {
                         // وضع "empty" في الخلية التي قبل العلامة
-                        row[i - 1] = "empty";
-                    }
+                      //  row[i - 1] = "empty";S
+                  //  }
                 }
                 return row;
             });
