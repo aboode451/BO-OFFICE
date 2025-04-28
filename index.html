@@ -560,7 +560,7 @@ function mergeAndCleanColumns(sheet, keywords) {
             // تحقق إذا كانت القيمة رقمية فقط
             !isNaN(mergedData[i][fatNoIndex]) ||
             // تحقق إذا كان الرقم يحتوي على حرف "E" بعده
-            /^[0-9]+E$/i.test(mergedData[i][fatNoIndex])
+/^[0-9]+[EBeb]$/.test(mergedData[i][fatNoIndex])
         )
     ) {
         mergedData[i][fatNoIndex] = "FAT" + mergedData[i][fatNoIndex];
